@@ -127,7 +127,7 @@
   tr.aire-row td { color: var(--red) !important; font-weight: 700 !important; }
   tr.normal-row td.col-asunto, tr.normal-row td.col-mensaje { font-weight: 700; }
   tr.bg-white td { background-color: #FFFFFF; }
-  tr.bg-gray  td { background-color: #EFEFEF; }
+  tr.bg-gray  td { background-color: #D6D6D6; }
   tr.totals-row td {
     font-weight: 700; font-size: 0.82rem;
     background: #E8EAF6 !important; color: var(--accent) !important;
@@ -319,6 +319,14 @@ function processXML(xmlText){
   }
 
   if(dataRows.length === 0){ showError('No se encontraron filas con datos válidos.'); return; }
+
+  // Ordenar por establecimiento para agrupar filas del mismo color
+  dataRows.sort(function(a, b){
+    var ea = (a['Establecimientos'] || '').toLowerCase();
+    var eb = (b['Establecimientos'] || '').toLowerCase();
+    return ea < eb ? -1 : ea > eb ? 1 : 0;
+  });
+
   renderTable(dataRows);
 }
 
