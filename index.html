@@ -142,15 +142,16 @@
     .table-scroll { max-height: none; overflow: visible; }
     @page { size: letter portrait; margin: 0.6cm; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    col.col-num      { width: 45px !important; }
+    col.col-num      { width: 50px !important; }
     col.col-fecha    { width: 52px !important; }
-    col.col-nombre   { width: 70px !important; }
-    col.col-asunto   { width: 110px !important; }
-    col.col-mensaje  { width: 150px !important; }
+    col.col-nombre   { width: 60px !important; }
+    col.col-asunto   { width: 105px !important; }
+    col.col-mensaje  { width: 130px !important; }
     col.col-establec { width: 105px !important; }
-    col.col-resumen  { width: 60px !important; }
-    table { font-size: 0.6rem; }
-    tbody tr td { padding: 3px 3px; }
+    col.col-resumen  { width: 55px !important; }
+    table { font-size: 0.6rem; table-layout: fixed !important; width: 100% !important; }
+    td.col-num { white-space: nowrap !important; overflow: visible !important; text-overflow: clip !important; font-size: 0.58rem !important; }
+    tbody tr td { padding: 3px 2px; word-break: break-word; overflow-wrap: break-word; }
     thead tr th { padding: 4px 3px !important; font-size: 0.62rem !important; }
     tr.bg-white td { background-color: #EEF2FF !important; }
     tr.bg-gray  td { background-color: #D6D6D6 !important; }
