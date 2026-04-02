@@ -195,104 +195,106 @@ function handleFile(file){
   reader.readAsText(file, 'UTF-8');
 }
 
-function decodeEntities(str){
-  return str.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'");
-}
-
 function formatDate(val){
+  // val like "2026-02-23T11:36:56.000"
   var m = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? m[3]+'/'+m[2]+'/'+m[1] : val;
 }
 
-function parseRows(xmlText){
-  // Replace CDATA so inner < > don't break regex
-  var text = xmlText.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, function(_,c){
-    return c.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  });
-
-  var rows = [];
-  var rPat = /<[Rr]ow[^>]*>([\s\S]*?)<\/[Rr]ow>/g;
-  var rm;
-  while((rm = rPat.exec(text)) !== null){
-    var rowText = rm[1];
-    var cells = [];
-    var cPat = /<[Cc]ell([^>]*)>([\s\S]*?)<\/[Cc]ell>/g;
-    var cm;
-    while((cm = cPat.exec(rowText)) !== null){
-      var attrs = cm[1];
-      var inner = cm[2];
-      var idxM = attrs.match(/[Ii]ndex="(\d+)"/);
-      var idx = idxM ? parseInt(idxM[1])-1 : null;
-      var dataM = inner.match(/<[Dd]ata([^>]*)>([\s\S]*?)<\/[Dd]ata>/);
-      var val = dataM ? dataM[2].trim() : '';
-      var typeM = dataM ? dataM[1].match(/[Tt]ype="([^"]+)"/) : null;
-      var type = typeM ? typeM[1] : '';
-      cells.push({idx:idx, val:val, type:type});
-    }
-    rows.push(cells);
-  }
-  return rows;
-}
-
+/**
+ * Usa DOMParser nativo para parsear el SpreadsheetML con namespace ss:
+ * Soporta CDATA, atributos ss:Index, tipos DateTime, etc.
+ */
 function processXML(xmlText){
-  var rows = parseRows(xmlText);
-  if(rows.length < 2){ showError('No se encontraron filas de datos.'); return; }
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(xmlText, 'application/xml');
 
-  // Build header array
-  var allHeaders = [];
-  var col = 0;
-  rows[0].forEach(function(c){
-    if(c.idx !== null) col = c.idx;
-    allHeaders[col] = decodeEntities(c.val);
-    col++;
-  });
+  // Verificar error de parseo
+  var parseErr = doc.querySelector('parsererror');
+  if(parseErr){ showError('XML inválido: ' + parseErr.textContent.slice(0,120)); return; }
 
-  // Map target columns to original indices
+  // Namespace SpreadsheetML
+  var NS = 'urn:schemas-microsoft-com:office:spreadsheet';
+
+  // Obtener todas las filas
+  var rowEls = doc.getElementsByTagNameNS(NS, 'Row');
+  if(rowEls.length < 2){ showError('No se encontraron filas de datos.'); return; }
+
+  // ---- Leer fila de encabezados (primera fila) ----
+  var allHeaders = readRow(rowEls[0], NS);
+
+  // Mapear columnas por nombre
   var colMap = {};
-  allHeaders.forEach(function(h,i){
-    if(h === undefined) return;
+  allHeaders.forEach(function(cell, i){
+    var h = cell.val.trim();
     var hl = h.toLowerCase();
-    if(h === '#') colMap['#'] = i;
-    else if(hl === 'fecha') colMap['Fecha'] = i;
-    else if(hl === 'nombre') colMap['Nombre'] = i;
-    else if(hl === 'asunto') colMap['Asunto'] = i;
-    else if(hl === 'mensaje') colMap['Mensaje'] = i;
-    else if(hl.indexOf('establecimientos comuna pudahuel') >= 0) colMap['Establecimientos'] = i;
+    if(h === '#')                                           colMap['#']                = i;
+    else if(hl === 'fecha')                                 colMap['Fecha']            = i;
+    else if(hl === 'nombre')                                colMap['Nombre']           = i;
+    else if(hl === 'asunto')                                colMap['Asunto']           = i;
+    else if(hl === 'mensaje')                               colMap['Mensaje']          = i;
+    else if(hl.indexOf('establec') >= 0 && hl.indexOf('pudahuel') >= 0 && hl.indexOf('comuna') >= 0)
+                                                            colMap['Establecimientos'] = i;
   });
 
-  // Fallback for Establecimientos
+  // Fallback: última columna que contenga "establec"
   if(colMap['Establecimientos'] === undefined){
     var last = -1;
-    allHeaders.forEach(function(h,i){ if(h && h.toLowerCase().indexOf('establec') >= 0) last = i; });
+    allHeaders.forEach(function(cell, i){
+      if(cell.val.toLowerCase().indexOf('establec') >= 0) last = i;
+    });
     if(last >= 0) colMap['Establecimientos'] = last;
   }
 
-  // Parse data rows
+  // ---- Leer filas de datos ----
   var dataRows = [];
-  for(var r = 1; r < rows.length; r++){
-    var rowData = {};
-    var c2 = 0;
-    rows[r].forEach(function(cell){
-      if(cell.idx !== null) c2 = cell.idx;
-      var val = decodeEntities(cell.val);
-      if(cell.type === 'DateTime' && val) val = formatDate(val);
-      rowData[c2] = val;
-      c2++;
-    });
+  for(var r = 1; r < rowEls.length; r++){
+    var cells = readRow(rowEls[r], NS);
 
     var rowObj = {};
     var hasData = false;
     COLS_KEEP.forEach(function(k){
       var oi = colMap[k];
-      rowObj[k] = (oi !== undefined && rowData[oi] !== undefined) ? rowData[oi] : '';
-      if(rowObj[k] !== '') hasData = true;
+      var val = '';
+      if(oi !== undefined && cells[oi] !== undefined){
+        val = cells[oi].val;
+        if(cells[oi].type === 'DateTime' && val) val = formatDate(val);
+      }
+      rowObj[k] = val;
+      if(val !== '') hasData = true;
     });
     if(!hasData) continue;
     dataRows.push(rowObj);
   }
 
-  if(dataRows.length === 0){ showError('No se encontraron filas con datos validos.'); return; }
+  if(dataRows.length === 0){ showError('No se encontraron filas con datos válidos.'); return; }
   renderTable(dataRows);
+}
+
+/**
+ * Lee una fila XML y devuelve un array plano de {val, type}
+ * respetando ss:Index para celdas que saltan columnas.
+ */
+function readRow(rowEl, NS){
+  var cellEls = rowEl.getElementsByTagNameNS(NS, 'Cell');
+  var cells = [];
+  var col = 0;
+
+  for(var i = 0; i < cellEls.length; i++){
+    var cellEl = cellEls[i];
+
+    // ss:Index es base-1
+    var idxAttr = cellEl.getAttributeNS(NS, 'Index');
+    if(idxAttr){ col = parseInt(idxAttr, 10) - 1; }
+
+    var dataEl = cellEl.getElementsByTagNameNS(NS, 'Data')[0];
+    var val  = dataEl ? dataEl.textContent : '';
+    var type = dataEl ? (dataEl.getAttributeNS(NS, 'Type') || '') : '';
+
+    cells[col] = { val: val, type: type };
+    col++;
+  }
+  return cells;
 }
 
 function mentionsAire(row){
@@ -314,20 +316,20 @@ function renderTable(dataRows){
       }
       prev = estab;
     }
-    row._bg = estabColorMap[estab] || 'bg-white';
+    row._bg   = estabColorMap[estab] || 'bg-white';
     row._aire = mentionsAire(row);
   });
 
-  var aireCount = 0;
+  var aireCount  = 0;
   dataRows.forEach(function(r){ if(r._aire) aireCount++; });
   var otrosCount = dataRows.length - aireCount;
 
   document.getElementById('stat-total').textContent = dataRows.length;
-  document.getElementById('stat-aire').textContent = aireCount;
+  document.getElementById('stat-aire').textContent  = aireCount;
   document.getElementById('stat-otros').textContent = otrosCount;
 
   // THEAD
-  var thead = document.getElementById('t-head');
+  var thead  = document.getElementById('t-head');
   thead.innerHTML = '';
   var headTr = document.createElement('tr');
   COLS_KEEP.forEach(function(h){
@@ -349,17 +351,17 @@ function renderTable(dataRows){
     tr.className = (row._aire ? 'aire-row' : 'normal-row') + ' ' + row._bg;
 
     COLS_KEEP.forEach(function(key){
-      var td = document.createElement('td');
+      var td  = document.createElement('td');
       td.textContent = row[key];
       var slug = key.toLowerCase().replace(/\s+/g,'-');
       td.className = (WRAP_COLS[key] ? 'wrap ' : '') + 'col-' + slug;
       tr.appendChild(td);
     });
-    tr.appendChild(document.createElement('td'));
+    tr.appendChild(document.createElement('td')); // columna Resumen vacía
     tbody.appendChild(tr);
   });
 
-  // TOTALS ROW
+  // FILA DE TOTALES
   var trTot = document.createElement('tr');
   trTot.className = 'totals-row';
   COLS_KEEP.forEach(function(k, i){
@@ -372,18 +374,20 @@ function renderTable(dataRows){
   trTot.appendChild(tdS);
   tbody.appendChild(trTot);
 
-  // Show UI
+  // Mostrar UI
   dropZone.style.display = 'none';
   document.getElementById('stats-bar').style.cssText = 'display:flex;';
-  document.getElementById('legend').style.cssText = 'display:flex;';
-  document.getElementById('toolbar').style.cssText = 'display:flex;';
+  document.getElementById('legend').style.cssText    = 'display:flex;';
+  document.getElementById('toolbar').style.cssText   = 'display:flex;';
   document.getElementById('table-container').style.display = 'block';
 }
 
 function resetApp(){
   dropZone.style.display = 'block';
   hideError();
-  ['stats-bar','legend','toolbar'].forEach(function(id){ document.getElementById(id).style.display='none'; });
+  ['stats-bar','legend','toolbar'].forEach(function(id){
+    document.getElementById(id).style.display='none';
+  });
   document.getElementById('table-container').style.display = 'none';
   document.getElementById('t-head').innerHTML = '';
   document.getElementById('t-body').innerHTML = '';
