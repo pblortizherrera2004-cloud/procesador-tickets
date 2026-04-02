@@ -138,13 +138,25 @@
   @media print {
     header, #drop-zone, #toolbar, #stats-bar, #legend, #error-box { display: none !important; }
     #table-container { display: block !important; box-shadow: none; border-radius: 0; }
-    body { background: white; font-size: 0.72rem; }
+    body { background: white; font-size: 0.65rem; }
     .table-scroll { max-height: none; overflow: visible; }
-    /* Carta vertical */
-    @page { size: letter portrait; margin: 0.8cm; }
-    table { font-size: 0.68rem; }
-    tbody tr td { padding: 4px 4px; }
-    thead tr th { padding: 5px 4px !important; font-size: 0.72rem !important; }
+    @page { size: letter portrait; margin: 0.6cm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    col.col-num      { width: 22px !important; }
+    col.col-fecha    { width: 52px !important; }
+    col.col-nombre   { width: 90px !important; }
+    col.col-asunto   { width: 110px !important; }
+    col.col-mensaje  { width: 195px !important; }
+    col.col-establec { width: 110px !important; }
+    col.col-resumen  { width: 60px !important; }
+    table { font-size: 0.6rem; }
+    tbody tr td { padding: 3px 3px; }
+    thead tr th { padding: 4px 3px !important; font-size: 0.62rem !important; }
+    tr.bg-white td { background-color: #EEF2FF !important; }
+    tr.bg-gray  td { background-color: #D6D6D6 !important; }
+    tr.aire-row td { color: #C62828 !important; font-weight: 700 !important; }
+    tr.totals-row td { background: #E8EAF6 !important; color: #1565C0 !important; }
+    thead tr th { background: #FFD600 !important; }
   }
 </style>
 </head>
@@ -452,11 +464,15 @@ function renderTable(dataRows){
   trTot.className = 'totals-row';
   COLS_KEEP.forEach(function(k, i){
     var td = document.createElement('td');
-    td.textContent = i === 0 ? 'TOTALES' : '';
+    if(i === 0){
+      td.textContent = 'TOTALES';
+      td.style.whiteSpace = 'nowrap';
+      td.style.textAlign = 'center';
+    }
     trTot.appendChild(td);
   });
   var tdS = document.createElement('td');
-  tdS.innerHTML = 'Aire/AC: <strong>' + aireCount + '</strong> &nbsp;|&nbsp; Otros: <strong>' + otrosCount + '</strong>';
+  tdS.innerHTML = 'Total: <strong>' + dataRows.length + '</strong> &nbsp;|&nbsp; Aire/AC: <strong>' + aireCount + '</strong> &nbsp;|&nbsp; Otros: <strong>' + otrosCount + '</strong>';
   trTot.appendChild(tdS);
   tbody.appendChild(trTot);
 
