@@ -277,25 +277,38 @@ function processXML(xmlText){
   // Mapear columnas por nombre
   var colMap = {};
   allHeaders.forEach(function(cell, i){
-    var h = cell.val.trim();
+    if(!cell) return;
+    var h  = cell.val.trim();
     var hl = h.toLowerCase();
-    if(h === '#')                                           colMap['#']                = i;
-    else if(hl === 'fecha')                                 colMap['Fecha']            = i;
-    else if(hl === 'nombre')                                colMap['Nombre']           = i;
-    else if(hl === 'asunto')                                colMap['Asunto']           = i;
-    else if(hl === 'mensaje')                               colMap['Mensaje']          = i;
-    else if(hl.indexOf('establec') >= 0 && hl.indexOf('pudahuel') >= 0 && hl.indexOf('comuna') >= 0)
-                                                            colMap['Establecimientos'] = i;
+    if(h === '#')             colMap['#']       = i;
+    else if(hl === 'fecha')   colMap['Fecha']   = i;
+    else if(hl === 'nombre')  colMap['Nombre']  = i;
+    else if(hl === 'asunto')  colMap['Asunto']  = i;
+    else if(hl === 'mensaje') colMap['Mensaje'] = i;
   });
 
-  // Fallback: última columna que contenga "establec"
-  if(colMap['Establecimientos'] === undefined){
-    var last = -1;
+  // Establecimientos: preferir "comuna pudahuel", luego "comuna", luego cualquier "establec"
+  var estabIdx = -1;
+  allHeaders.forEach(function(cell, i){
+    if(!cell) return;
+    var hl = cell.val.toLowerCase();
+    if(hl.indexOf('establec') >= 0 && hl.indexOf('pudahuel') >= 0 && hl.indexOf('comuna') >= 0)
+      estabIdx = i;
+  });
+  if(estabIdx < 0){
     allHeaders.forEach(function(cell, i){
-      if(cell.val.toLowerCase().indexOf('establec') >= 0) last = i;
+      if(!cell) return;
+      var hl = cell.val.toLowerCase();
+      if(hl.indexOf('establec') >= 0 && hl.indexOf('comuna') >= 0) estabIdx = i;
     });
-    if(last >= 0) colMap['Establecimientos'] = last;
   }
+  if(estabIdx < 0){
+    allHeaders.forEach(function(cell, i){
+      if(!cell) return;
+      if(cell.val.toLowerCase().indexOf('establec') >= 0) estabIdx = i;
+    });
+  }
+  if(estabIdx >= 0) colMap['Establecimientos'] = estabIdx;
 
   // ---- Leer filas de datos ----
   var dataRows = [];
@@ -319,6 +332,8 @@ function processXML(xmlText){
   }
 
   if(dataRows.length === 0){ showError('No se encontraron filas con datos válidos.'); return; }
+  console.log('[HESK] colMap:', JSON.stringify(colMap));
+  console.log('[HESK] Establecimientos únicos:', dataRows.map(function(r){ return r['Establecimientos']; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).sort());
 
   // Ordenar por establecimiento para agrupar filas del mismo color
   dataRows.sort(function(a, b){
