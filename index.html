@@ -78,31 +78,73 @@
   .legend-dot { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.1); }
   #table-container { display: none; background: white; border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
   .table-scroll { overflow-x: auto; max-height: 70vh; overflow-y: auto; }
-  table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.78rem; table-layout: fixed; }
+
+  /* Anchos fijos para que todo quepa en carta vertical */
+  col.col-num           { width: 32px; }
+  col.col-fecha         { width: 62px; }
+  col.col-nombre        { width: 110px; }
+  col.col-asunto        { width: 150px; }
+  col.col-mensaje       { width: 240px; }
+  col.col-establec      { width: 130px; }
+  col.col-resumen       { width: 80px; }
+
   thead tr th {
     background: var(--yellow) !important; color: #1A1A1A !important;
-    font-weight: 700 !important; font-size: 0.95rem !important;
-    text-align: center !important; padding: 10px 14px !important;
-    border: 1px solid #BDBDBD; white-space: nowrap;
+    font-weight: 700 !important; font-size: 0.82rem !important;
+    text-align: center !important; padding: 8px 6px !important;
+    border: 1px solid #BDBDBD;
     position: sticky; top: 0; z-index: 10;
   }
-  tbody tr td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; word-break: break-word; }
-  td.wrap { white-space: pre-wrap; min-width: 180px; max-width: 280px; }
+
+  /* Todas las celdas: centrado vertical, sin overflow horizontal */
+  tbody tr td {
+    padding: 6px 6px;
+    border: 1px solid var(--border);
+    vertical-align: middle;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    text-align: left;
+  }
+
+  /* Solo mensaje: alineado arriba y con saltos de línea */
+  td.col-mensaje {
+    vertical-align: top !important;
+    white-space: pre-wrap;
+  }
+
+  /* # y Fecha: una sola línea, texto centrado horizontalmente */
+  td.col-num, td.col-fecha {
+    white-space: nowrap;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Resumen también centrado */
+  td.col-resumen { text-align: center; vertical-align: middle; }
+
   tr.aire-row td { color: var(--red) !important; font-weight: 700 !important; }
   tr.normal-row td.col-asunto, tr.normal-row td.col-mensaje { font-weight: 700; }
   tr.bg-white td { background-color: #FFFFFF; }
-  tr.bg-gray td { background-color: #EFEFEF; }
+  tr.bg-gray  td { background-color: #EFEFEF; }
   tr.totals-row td {
-    font-weight: 700; font-size: 0.85rem;
+    font-weight: 700; font-size: 0.82rem;
     background: #E8EAF6 !important; color: var(--accent) !important;
     border-top: 2px solid var(--accent);
+    vertical-align: middle; text-align: center;
   }
+
   @media print {
     header, #drop-zone, #toolbar, #stats-bar, #legend, #error-box { display: none !important; }
     #table-container { display: block !important; box-shadow: none; border-radius: 0; }
-    body { background: white; }
+    body { background: white; font-size: 0.72rem; }
     .table-scroll { max-height: none; overflow: visible; }
-    @page { size: letter landscape; margin: 1cm; }
+    /* Carta vertical */
+    @page { size: letter portrait; margin: 0.8cm; }
+    table { font-size: 0.68rem; }
+    tbody tr td { padding: 4px 4px; }
+    thead tr th { padding: 5px 4px !important; font-size: 0.72rem !important; }
   }
 </style>
 </head>
@@ -150,6 +192,15 @@
   <div id="table-container">
     <div class="table-scroll">
       <table id="main-table">
+        <colgroup>
+          <col class="col-num">
+          <col class="col-fecha">
+          <col class="col-nombre">
+          <col class="col-asunto">
+          <col class="col-mensaje">
+          <col class="col-establec">
+          <col class="col-resumen">
+        </colgroup>
         <thead id="t-head"></thead>
         <tbody id="t-body"></tbody>
       </table>
@@ -303,20 +354,16 @@ function mentionsAire(row){
 }
 
 function renderTable(dataRows){
-  var estabColorMap = {};
   var toggle = 0;
-  var prev = null;
+  var prevEstab = null;
 
   dataRows.forEach(function(row){
     var estab = row['Establecimientos'];
-    if(estab !== prev){
-      if(!(estab in estabColorMap)){
-        estabColorMap[estab] = toggle % 2 === 0 ? 'bg-white' : 'bg-gray';
-        toggle++;
-      }
-      prev = estab;
+    if(estab !== prevEstab){
+      toggle++;
+      prevEstab = estab;
     }
-    row._bg   = estabColorMap[estab] || 'bg-white';
+    row._bg   = toggle % 2 === 1 ? 'bg-white' : 'bg-gray';
     row._aire = mentionsAire(row);
   });
 
@@ -351,13 +398,23 @@ function renderTable(dataRows){
     tr.className = (row._aire ? 'aire-row' : 'normal-row') + ' ' + row._bg;
 
     COLS_KEEP.forEach(function(key){
-      var td  = document.createElement('td');
+      var td = document.createElement('td');
       td.textContent = row[key];
-      var slug = key.toLowerCase().replace(/\s+/g,'-');
-      td.className = (WRAP_COLS[key] ? 'wrap ' : '') + 'col-' + slug;
+      // Mapa de clave → clase CSS
+      var classMap = {
+        '#':               'col-num',
+        'Fecha':           'col-fecha',
+        'Nombre':          'col-nombre',
+        'Asunto':          'col-asunto',
+        'Mensaje':         'col-mensaje',
+        'Establecimientos':'col-establec'
+      };
+      td.className = classMap[key] || ('col-' + key.toLowerCase());
       tr.appendChild(td);
     });
-    tr.appendChild(document.createElement('td')); // columna Resumen vacía
+    var tdRes = document.createElement('td');
+    tdRes.className = 'col-resumen';
+    tr.appendChild(tdRes); // columna Resumen vacía
     tbody.appendChild(tr);
   });
 
