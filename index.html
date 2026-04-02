@@ -126,7 +126,7 @@
 
   tr.aire-row td { color: var(--red) !important; font-weight: 700 !important; }
   tr.normal-row td.col-asunto, tr.normal-row td.col-mensaje { font-weight: 700; }
-  tr.bg-white td { background-color: #FFFFFF; }
+  tr.bg-white td { background-color: #EEF2FF; }
   tr.bg-gray  td { background-color: #D6D6D6; }
   tr.totals-row td {
     font-weight: 700; font-size: 0.82rem;
@@ -335,11 +335,17 @@ function processXML(xmlText){
   console.log('[HESK] colMap:', JSON.stringify(colMap));
   console.log('[HESK] Establecimientos únicos:', dataRows.map(function(r){ return r['Establecimientos']; }).filter(function(v,i,a){ return a.indexOf(v)===i; }).sort());
 
-  // Ordenar por establecimiento para agrupar filas del mismo color
+  // Ordenar: por establecimiento (vacíos al final), luego por # de ticket
   dataRows.sort(function(a, b){
-    var ea = (a['Establecimientos'] || '').toLowerCase();
-    var eb = (b['Establecimientos'] || '').toLowerCase();
-    return ea < eb ? -1 : ea > eb ? 1 : 0;
+    var ea = (a['Establecimientos'] || '').trim().toLowerCase();
+    var eb = (b['Establecimientos'] || '').trim().toLowerCase();
+    if(ea === '' && eb !== '') return 1;
+    if(ea !== '' && eb === '') return -1;
+    if(ea !== eb) return ea < eb ? -1 : 1;
+    // mismo establecimiento: ordenar por # numérico
+    var na = parseInt(a['#'], 10) || 0;
+    var nb = parseInt(b['#'], 10) || 0;
+    return na - nb;
   });
 
   renderTable(dataRows);
@@ -377,16 +383,16 @@ function mentionsAire(row){
 }
 
 function renderTable(dataRows){
-  var toggle = 0;
+  // Asignar color por grupo: cada cambio de establecimiento alterna
+  var groupIndex = 0;
   var prevEstab = null;
-
   dataRows.forEach(function(row){
     var estab = row['Establecimientos'];
     if(estab !== prevEstab){
-      toggle++;
+      if(prevEstab !== null) groupIndex++;
       prevEstab = estab;
     }
-    row._bg   = toggle % 2 === 1 ? 'bg-white' : 'bg-gray';
+    row._bg   = groupIndex % 2 === 0 ? 'bg-white' : 'bg-gray';
     row._aire = mentionsAire(row);
   });
 
