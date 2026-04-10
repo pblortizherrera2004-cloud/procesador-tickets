@@ -348,20 +348,23 @@ function mentionsAire(row){
 }
 
 function renderTable(dataRows){
-  var estabColorMap = {};
+  // Sort alphabetically by Establecimientos
+  dataRows.sort(function(a, b){
+    var ea = (a['Establecimientos'] || '').toLowerCase();
+    var eb = (b['Establecimientos'] || '').toLowerCase();
+    return ea < eb ? -1 : ea > eb ? 1 : 0;
+  });
+
+  // Assign alternating bg color on each group change
   var toggle = 0;
   var prev = null;
-
   dataRows.forEach(function(row){
     var estab = row['Establecimientos'];
     if(estab !== prev){
-      if(!(estab in estabColorMap)){
-        estabColorMap[estab] = toggle % 2 === 0 ? 'bg-white' : 'bg-gray';
-        toggle++;
-      }
+      toggle++;
       prev = estab;
     }
-    row._bg = estabColorMap[estab] || 'bg-white';
+    row._bg = toggle % 2 === 0 ? 'bg-gray' : 'bg-white';
     row._aire = mentionsAire(row);
   });
 
