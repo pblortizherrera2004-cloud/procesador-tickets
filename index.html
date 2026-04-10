@@ -349,6 +349,9 @@ function renderTable(dataRows){
   });
   var thRes = document.createElement('th');
   thRes.textContent = 'Resumen';
+  thRes.style.width = '60px';
+  thRes.style.minWidth = '60px';
+  thRes.style.maxWidth = '60px';
   headTr.appendChild(thRes);
   thead.appendChild(headTr);
 
@@ -377,18 +380,23 @@ function renderTable(dataRows){
       tr.appendChild(td);
     });
 
-    // Resumen cell: aire left in red, otros right in black
+    // Resumen cell: centered, bold, colored
     var tdRes = document.createElement('td');
     tdRes.style.fontFamily = 'monospace';
-    tdRes.style.fontSize = '0.82rem';
-    tdRes.style.position = 'relative';
-    tdRes.style.minWidth = '80px';
+    tdRes.style.fontSize = '0.9rem';
+    tdRes.style.fontWeight = '700';
+    tdRes.style.textAlign = 'center';
+    tdRes.style.verticalAlign = 'middle';
+    tdRes.style.whiteSpace = 'nowrap';
+    tdRes.style.width = '60px';
+    tdRes.style.minWidth = '60px';
+    tdRes.style.maxWidth = '60px';
     if(row._aire){
       aireCounter++;
-      tdRes.innerHTML = '<span style="color:#C62828;font-weight:700;float:left;">' + aireCounter + '</span>';
+      tdRes.innerHTML = '<span style="color:#C62828;">' + aireCounter + '</span>';
     } else {
       otrosCounter++;
-      tdRes.innerHTML = '<span style="color:#1A1A1A;float:right;">' + otrosCounter + '</span>';
+      tdRes.innerHTML = '<span style="color:#1A1A1A;">' + otrosCounter + '</span>';
     }
     tr.appendChild(tdRes);
     tbody.appendChild(tr);
