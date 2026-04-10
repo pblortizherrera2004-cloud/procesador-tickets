@@ -462,10 +462,10 @@ function renderTable(dataRows){
   trTot.appendChild(tdLabel);
   var tdS = document.createElement('td');
   tdS.style.whiteSpace = 'nowrap';
-  tdS.style.textAlign = 'center';
+  tdS.style.textAlign = 'left';
+  tdS.style.paddingLeft = '4px';
   tdS.innerHTML = '<span style="color:#C62828;font-weight:700;">' + aireCount + '</span>'
-    + ' / '
-    + '<span style="color:#1A1A1A;font-weight:700;">' + otrosCount + '</span>';
+    + '/<span style="color:#1A1A1A;font-weight:700;">' + otrosCount + '</span>';
   trTot.appendChild(tdS);
   tbody.appendChild(trTot);
 
