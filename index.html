@@ -135,13 +135,13 @@
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    col.col-num   { width: 28px; }
-    col.col-fecha { width: 58px; }
-    col.col-nombre { width: 90px; }
-    col.col-asunto { width: 130px; }
-    col.col-mensaje { width: 170px; }
-    col.col-estab { width: 90px; }
-    col.col-resumen { width: 28px; }
+    col.col-num   { width: 30px; }
+    col.col-fecha { width: 70px; }
+    col.col-nombre { width: 85px; }
+    col.col-asunto { width: 95px; }
+    col.col-mensaje { width: 175px; }
+    col.col-estab { width: 85px; }
+    col.col-resumen { width: 26px; }
     @page { size: letter portrait; margin: 1cm; }
   }
 </style>
@@ -377,13 +377,13 @@ function renderTable(dataRows){
   if(oldCg) table.removeChild(oldCg);
   var cg = document.createElement('colgroup');
   var colDefs = [
-    {cls:'col-num',   w:'28px'},
-    {cls:'col-fecha', w:'58px'},
-    {cls:'col-nombre',w:'90px'},
-    {cls:'col-asunto',w:'130px'},
-    {cls:'col-mensaje',w:'170px'},
-    {cls:'col-estab', w:'90px'},
-    {cls:'col-resumen',w:'28px'}
+    {cls:'col-num',   w:'30px'},
+    {cls:'col-fecha', w:'70px'},
+    {cls:'col-nombre',w:'85px'},
+    {cls:'col-asunto',w:'95px'},
+    {cls:'col-mensaje',w:'175px'},
+    {cls:'col-estab', w:'85px'},
+    {cls:'col-resumen',w:'26px'}
   ];
   colDefs.forEach(function(d){
     var col = document.createElement('col');
