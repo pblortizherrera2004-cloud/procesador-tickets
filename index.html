@@ -463,7 +463,9 @@ function renderTable(dataRows){
   var tdS = document.createElement('td');
   tdS.style.whiteSpace = 'nowrap';
   tdS.style.textAlign = 'left';
-  tdS.style.paddingLeft = '4px';
+  tdS.style.paddingLeft = '0px';
+  tdS.style.paddingRight = '8px';
+  tdS.colSpan = 2;
   tdS.innerHTML = '<span style="color:#C62828;font-weight:700;">' + aireCount + '</span>'
     + '/<span style="color:#1A1A1A;font-weight:700;">' + otrosCount + '</span>';
   trTot.appendChild(tdS);
