@@ -452,21 +452,15 @@ function renderTable(dataRows){
     tbody.appendChild(tr);
   });
 
-  // TOTALS ROW — merge all data cols into one label, summary in last cell
+  // TOTALS ROW — single merged cell with TOTALES + counts
   var trTot = document.createElement('tr');
   trTot.className = 'totals-row';
-  var tdLabel = document.createElement('td');
-  tdLabel.colSpan = COLS_KEEP.length;
-  tdLabel.textContent = 'TOTALES';
-  tdLabel.style.textAlign = 'left';
-  trTot.appendChild(tdLabel);
   var tdS = document.createElement('td');
+  tdS.colSpan = COLS_KEEP.length + 1;
   tdS.style.whiteSpace = 'nowrap';
   tdS.style.textAlign = 'left';
-  tdS.style.paddingLeft = '0px';
-  tdS.style.paddingRight = '8px';
-  tdS.colSpan = 2;
-  tdS.innerHTML = '<span style="color:#C62828;font-weight:700;">' + aireCount + '</span>'
+  tdS.style.paddingLeft = '6px';
+  tdS.innerHTML = 'TOTALES &nbsp;&nbsp; <span style="color:#C62828;font-weight:700;">' + aireCount + '</span>'
     + '/<span style="color:#1A1A1A;font-weight:700;">' + otrosCount + '</span>';
   trTot.appendChild(tdS);
   tbody.appendChild(trTot);
