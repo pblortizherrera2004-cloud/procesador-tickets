@@ -135,13 +135,15 @@
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    col.col-num   { width: 30px; }
-    col.col-fecha { width: 70px; }
-    col.col-nombre { width: 85px; }
-    col.col-asunto { width: 95px; }
-    col.col-mensaje { width: 175px; }
-    col.col-estab { width: 85px; }
+    col.col-num   { width: 42px; }
+    col.col-fecha { width: 68px; }
+    col.col-nombre { width: 82px; }
+    col.col-asunto { width: 80px; }
+    col.col-mensaje { width: 170px; }
+    col.col-estab { width: 82px; }
     col.col-resumen { width: 26px; }
+    td.col-\# { white-space: nowrap !important; }
+    td.col-fecha { white-space: nowrap !important; }
     @page { size: letter portrait; margin: 1cm; }
   }
 </style>
@@ -377,12 +379,12 @@ function renderTable(dataRows){
   if(oldCg) table.removeChild(oldCg);
   var cg = document.createElement('colgroup');
   var colDefs = [
-    {cls:'col-num',   w:'30px'},
-    {cls:'col-fecha', w:'70px'},
-    {cls:'col-nombre',w:'85px'},
-    {cls:'col-asunto',w:'95px'},
-    {cls:'col-mensaje',w:'175px'},
-    {cls:'col-estab', w:'85px'},
+    {cls:'col-num',   w:'42px'},
+    {cls:'col-fecha', w:'68px'},
+    {cls:'col-nombre',w:'82px'},
+    {cls:'col-asunto',w:'80px'},
+    {cls:'col-mensaje',w:'170px'},
+    {cls:'col-estab', w:'82px'},
     {cls:'col-resumen',w:'26px'}
   ];
   colDefs.forEach(function(d){
@@ -450,16 +452,20 @@ function renderTable(dataRows){
     tbody.appendChild(tr);
   });
 
-  // TOTALS ROW
+  // TOTALS ROW — merge all data cols into one label, summary in last cell
   var trTot = document.createElement('tr');
   trTot.className = 'totals-row';
-  COLS_KEEP.forEach(function(k, i){
-    var td = document.createElement('td');
-    td.textContent = i === 0 ? 'TOTALES' : '';
-    trTot.appendChild(td);
-  });
+  var tdLabel = document.createElement('td');
+  tdLabel.colSpan = COLS_KEEP.length;
+  tdLabel.textContent = 'TOTALES';
+  tdLabel.style.textAlign = 'left';
+  trTot.appendChild(tdLabel);
   var tdS = document.createElement('td');
-  tdS.innerHTML = 'Aire/AC: <strong>' + aireCount + '</strong> &nbsp;|&nbsp; Otros: <strong>' + otrosCount + '</strong>';
+  tdS.style.whiteSpace = 'nowrap';
+  tdS.style.textAlign = 'center';
+  tdS.innerHTML = '<span style="color:#C62828;font-weight:700;">' + aireCount + '</span>'
+    + ' / '
+    + '<span style="color:#1A1A1A;font-weight:700;">' + otrosCount + '</span>';
   trTot.appendChild(tdS);
   tbody.appendChild(trTot);
 
