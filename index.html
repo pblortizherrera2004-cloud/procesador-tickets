@@ -109,10 +109,39 @@
     #table-container { display: block !important; box-shadow: none; border-radius: 0; }
     body { background: white; }
     .table-scroll { max-height: none; overflow: visible; }
-    table { width: 100%; font-size: 0.72rem; }
-    td, th { padding: 5px 7px !important; }
-    td.wrap { max-width: 160px !important; min-width: 100px !important; white-space: pre-wrap; }
-    thead tr th { font-size: 0.8rem !important; padding: 6px 7px !important; }
+    table { width: 100%; font-size: 0.72rem; table-layout: fixed; }
+    thead tr th {
+      background: #FFD600 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      font-size: 0.78rem !important;
+      padding: 5px 4px !important;
+      white-space: nowrap;
+    }
+    td { padding: 4px 4px !important; }
+    td.wrap { white-space: pre-wrap !important; overflow-wrap: break-word; }
+    tr.bg-gray td {
+      background-color: #EFEFEF !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    tr.bg-white td {
+      background-color: #FFFFFF !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    tr.aire-row td {
+      color: #C62828 !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    col.col-num   { width: 28px; }
+    col.col-fecha { width: 58px; }
+    col.col-nombre { width: 90px; }
+    col.col-asunto { width: 130px; }
+    col.col-mensaje { width: 170px; }
+    col.col-estab { width: 90px; }
+    col.col-resumen { width: 28px; }
     @page { size: letter portrait; margin: 1cm; }
   }
 </style>
@@ -341,6 +370,28 @@ function renderTable(dataRows){
   document.getElementById('stat-total').textContent = dataRows.length;
   document.getElementById('stat-aire').textContent = aireCount;
   document.getElementById('stat-otros').textContent = otrosCount;
+
+  // COLGROUP for fixed print widths
+  var table = document.getElementById('main-table');
+  var oldCg = table.querySelector('colgroup');
+  if(oldCg) table.removeChild(oldCg);
+  var cg = document.createElement('colgroup');
+  var colDefs = [
+    {cls:'col-num',   w:'28px'},
+    {cls:'col-fecha', w:'58px'},
+    {cls:'col-nombre',w:'90px'},
+    {cls:'col-asunto',w:'130px'},
+    {cls:'col-mensaje',w:'170px'},
+    {cls:'col-estab', w:'90px'},
+    {cls:'col-resumen',w:'28px'}
+  ];
+  colDefs.forEach(function(d){
+    var col = document.createElement('col');
+    col.className = d.cls;
+    col.style.width = d.w;
+    cg.appendChild(col);
+  });
+  table.insertBefore(cg, table.firstChild);
 
   // THEAD
   var thead = document.getElementById('t-head');
