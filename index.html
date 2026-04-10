@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procesador de Tickets HESK</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --yellow: #FFD600;
+    --red: #C62828;
+    --border: #E0E0E0;
+    --text: #1A1A1A;
+    --muted: #757575;
+    --accent: #1565C0;
+    --header-bg: #1A237E;
+    --shadow: 0 2px 12px rgba(0,0,0,0.10);
+  }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: #F0F2F5; color: var(--text); min-height: 100vh; }
+  header {
+    background: var(--header-bg); color: white;
+    padding: 1.25rem 2rem; display: flex; align-items: center; gap: 1rem;
+    box-shadow: var(--shadow);
+  }
+  header .logo {
+    width: 38px; height: 38px; background: var(--yellow); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700; color: var(--header-bg);
+  }
+  header h1 { font-size: 1.15rem; font-weight: 600; }
+  header p { font-size: 0.78rem; opacity: 0.7; margin-top: 1px; }
+  main { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem; }
+  #drop-zone {
+    border: 2px dashed #90A4AE; border-radius: 14px; padding: 3rem 2rem;
+    text-align: center; cursor: pointer; background: white; transition: all 0.2s; margin-bottom: 2rem;
+  }
+  #drop-zone:hover, #drop-zone.drag-over { border-color: var(--accent); background: #E8EAF6; }
+  #drop-zone input { display: none; }
+  #drop-zone .icon { font-size: 3rem; margin-bottom: 0.75rem; }
+  #drop-zone h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.4rem; }
+  #drop-zone p { font-size: 0.85rem; color: var(--muted); }
+  #drop-zone .badge {
+    display: inline-block; margin-top: 1rem; background: #E8EAF6; color: var(--accent);
+    font-size: 0.75rem; font-weight: 600; padding: 4px 12px; border-radius: 20px;
+  }
+  #error-box {
+    display: none; background: #FFEBEE; border: 1px solid #FFCDD2; border-radius: 10px;
+    padding: 1rem 1.25rem; margin-bottom: 1rem; color: var(--red); font-size: 0.85rem;
+  }
+  #stats-bar { display: none; gap: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .stat-card {
+    flex: 1; min-width: 160px; background: white; border-radius: 10px;
+    padding: 1rem 1.25rem; box-shadow: var(--shadow); border-left: 4px solid #ccc;
+  }
+  .stat-card.total { border-color: var(--accent); }
+  .stat-card.aire { border-color: var(--red); }
+  .stat-card.otros { border-color: #43A047; }
+  .stat-card .num { font-size: 2rem; font-weight: 600; line-height: 1; }
+  .stat-card .lbl { font-size: 0.75rem; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-card.aire .num { color: var(--red); }
+  .stat-card.otros .num { color: #2E7D32; }
+  .stat-card.total .num { color: var(--accent); }
+  #toolbar { display: none; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .btn {
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 0.82rem; font-weight: 500;
+    padding: 8px 16px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: white; color: var(--text); cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: #F5F5F5; }
+  .btn.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn.primary:hover { background: #0D47A1; }
+  .btn.reset { border-color: #FFCDD2; color: var(--red); }
+  .btn.reset:hover { background: #FFEBEE; }
+  #legend { display: none; gap: 16px; margin-bottom: 1rem; flex-wrap: wrap; font-size: 0.78rem; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.1); }
+  #table-container { display: none; background: white; border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .table-scroll { overflow-x: auto; max-height: 70vh; overflow-y: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+  thead tr th {
+    background: var(--yellow) !important; color: #1A1A1A !important;
+    font-weight: 700 !important; font-size: 0.95rem !important;
+    text-align: center !important; padding: 10px 14px !important;
+    border: 1px solid #BDBDBD; white-space: nowrap;
+    position: sticky; top: 0; z-index: 10;
+  }
+  tbody tr td { padding: 8px 12px; border: 1px solid var(--border); vertical-align: top; word-break: break-word; }
+  td.wrap { white-space: pre-wrap; min-width: 180px; max-width: 280px; }
+  tr.aire-row td { color: var(--red) !important; font-weight: 700 !important; }
+  tr.normal-row td.col-asunto, tr.normal-row td.col-mensaje { font-weight: 700; }
+  tr.bg-white td { background-color: #FFFFFF; }
+  tr.bg-gray td { background-color: #EFEFEF; }
+  tr.totals-row td {
+    font-weight: 700; font-size: 0.85rem;
+    background: #E8EAF6 !important; color: var(--accent) !important;
+    border-top: 2px solid var(--accent);
+  }
+  #print-header {
+    display: none;
+    margin-bottom: 1rem;
+  }
+  #print-header h2 { font-size: 1rem; font-weight: 600; color: #1A237E; }
+  #print-header p { font-size: 0.8rem; color: #555; margin-top: 2px; }
+  @media print {
+    header, #drop-zone, #toolbar, #stats-bar, #legend, #error-box { display: none !important; }
+    #print-header { display: block !important; }
+    #table-container { display: block !important; box-shadow: none; border-radius: 0; }
+    body { background: white; }
+    .table-scroll { max-height: none; overflow: visible; }
+    @page { size: letter landscape; margin: 1cm; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">T</div>
+  <div>
+    <h1>Procesador de Tickets HESK</h1>
+    <p>Filtrado automatico · Formato de impresion carta</p>
+  </div>
+</header>
+
+<main>
+  <div id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <input type="file" id="file-input" accept=".xml,.XML">
+    <div class="icon">&#128194;</div>
+    <h2>Sube tu archivo XML de HESK</h2>
+    <p>Arrastra el archivo aqui o haz clic para seleccionarlo</p>
+    <span class="badge">.xml &mdash; SpreadsheetML</span>
+  </div>
+
+  <div id="error-box"></div>
+
+  <div id="stats-bar">
+    <div class="stat-card total"><div class="num" id="stat-total">0</div><div class="lbl">Total tickets</div></div>
+    <div class="stat-card aire"><div class="num" id="stat-aire">0</div><div class="lbl">Mencionan Aire / AC</div></div>
+    <div class="stat-card otros"><div class="num" id="stat-otros">0</div><div class="lbl">Sin mencion de Aire</div></div>
+  </div>
+
+  <div id="legend">
+    <span style="font-weight:600; margin-right:4px;">Leyenda:</span>
+    <div class="legend-item"><div class="legend-dot" style="background:#FFEBEE; border-color:#FFCDD2;"></div> Fila con Aire / AC (rojo negrita)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FFFFFF;"></div> Establecimiento par (blanco)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#EFEFEF;"></div> Establecimiento impar (gris)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#E8EAF6;"></div> Fila de totales</div>
+  </div>
+
+  <div id="toolbar">
+    <button class="btn primary" onclick="window.print()">Imprimir / PDF</button>
+    <button class="btn reset" onclick="resetApp()">Cargar otro archivo</button>
+    <span style="font-size:0.78rem; color:#757575; margin-left:auto;" id="filename-label"></span>
+  </div>
+
+  <div id="print-header">
+    <h2>Reporte de Tickets HESK</h2>
+    <p id="print-date"></p>
+  </div>
+
+  <div id="table-container">
+    <div class="table-scroll">
+      <table id="main-table">
+        <thead id="t-head"></thead>
+        <tbody id="t-body"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+var COLS_KEEP = ['#', 'Fecha', 'Nombre', 'Asunto', 'Mensaje', 'Establecimientos'];
+var AIRE_REGEX = /aire\s*acondicionado|aire\s+acond|\baire\b|\bac\b/i;
+var WRAP_COLS = {'Nombre':1,'Asunto':1,'Mensaje':1,'Establecimientos':1};
+
+var dropZone = document.getElementById('drop-zone');
+var fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', function(e){ e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', function(){ dropZone.classList.remove('drag-over'); });
+dropZone.addEventListener('drop', function(e){
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', function(e){
+  if(e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+function showError(msg){
+  var b = document.getElementById('error-box');
+  b.textContent = 'Error: ' + msg;
+  b.style.display = 'block';
+}
+function hideError(){ document.getElementById('error-box').style.display='none'; }
+
+function handleFile(file){
+  hideError();
+  document.getElementById('filename-label').textContent = file.name;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try { processXML(e.target.result); }
+    catch(err){ showError(err.message); }
+  };
+  reader.onerror = function(){ showError('No se pudo leer el archivo.'); };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function decodeEntities(str){
+  return str.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+}
+
+function formatDate(val){
+  var m = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? m[3]+'/'+m[2]+'/'+m[1] : val;
+}
+
+function parseRows(xmlText){
+  // Replace CDATA so inner < > don't break regex
+  var text = xmlText.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, function(_,c){
+    return c.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  });
+
+  var rows = [];
+  var rPat = /<[Rr]ow[^>]*>([\s\S]*?)<\/[Rr]ow>/g;
+  var rm;
+  while((rm = rPat.exec(text)) !== null){
+    var rowText = rm[1];
+    var cells = [];
+    var cPat = /<[Cc]ell([^>]*)>([\s\S]*?)<\/[Cc]ell>/g;
+    var cm;
+    while((cm = cPat.exec(rowText)) !== null){
+      var attrs = cm[1];
+      var inner = cm[2];
+      var idxM = attrs.match(/[Ii]ndex="(\d+)"/);
+      var idx = idxM ? parseInt(idxM[1])-1 : null;
+      var dataM = inner.match(/<[Dd]ata([^>]*)>([\s\S]*?)<\/[Dd]ata>/);
+      var val = dataM ? dataM[2].trim() : '';
+      var typeM = dataM ? dataM[1].match(/[Tt]ype="([^"]+)"/) : null;
+      var type = typeM ? typeM[1] : '';
+      cells.push({idx:idx, val:val, type:type});
+    }
+    rows.push(cells);
+  }
+  return rows;
+}
+
+function processXML(xmlText){
+  var rows = parseRows(xmlText);
+  if(rows.length < 2){ showError('No se encontraron filas de datos.'); return; }
+
+  // Build header array
+  var allHeaders = [];
+  var col = 0;
+  rows[0].forEach(function(c){
+    if(c.idx !== null) col = c.idx;
+    allHeaders[col] = decodeEntities(c.val);
+    col++;
+  });
+
+  // Map target columns to original indices
+  var colMap = {};
+  allHeaders.forEach(function(h,i){
+    if(h === undefined) return;
+    var hl = h.toLowerCase();
+    if(h === '#') colMap['#'] = i;
+    else if(hl === 'fecha') colMap['Fecha'] = i;
+    else if(hl === 'nombre') colMap['Nombre'] = i;
+    else if(hl === 'asunto') colMap['Asunto'] = i;
+    else if(hl === 'mensaje') colMap['Mensaje'] = i;
+    else if(hl.indexOf('establecimientos comuna pudahuel') >= 0) colMap['Establecimientos'] = i;
+  });
+
+  // Fallback for Establecimientos
+  if(colMap['Establecimientos'] === undefined){
+    var last = -1;
+    allHeaders.forEach(function(h,i){ if(h && h.toLowerCase().indexOf('establec') >= 0) last = i; });
+    if(last >= 0) colMap['Establecimientos'] = last;
+  }
+
+  // Parse data rows
+  var dataRows = [];
+  for(var r = 1; r < rows.length; r++){
+    var rowData = {};
+    var c2 = 0;
+    rows[r].forEach(function(cell){
+      if(cell.idx !== null) c2 = cell.idx;
+      var val = decodeEntities(cell.val);
+      if(cell.type === 'DateTime' && val) val = formatDate(val);
+      rowData[c2] = val;
+      c2++;
+    });
+
+    var rowObj = {};
+    var hasData = false;
+    COLS_KEEP.forEach(function(k){
+      var oi = colMap[k];
+      rowObj[k] = (oi !== undefined && rowData[oi] !== undefined) ? rowData[oi] : '';
+      if(rowObj[k] !== '') hasData = true;
+    });
+    if(!hasData) continue;
+    dataRows.push(rowObj);
+  }
+
+  if(dataRows.length === 0){ showError('No se encontraron filas con datos validos.'); return; }
+  renderTable(dataRows);
+}
+
+function mentionsAire(row){
+  var text = (row['Asunto']||'') + ' ' + (row['Mensaje']||'');
+  return AIRE_REGEX.test(text);
+}
+
+function renderTable(dataRows){
+  var estabColorMap = {};
+  var toggle = 0;
+  var prev = null;
+
+  dataRows.forEach(function(row){
+    var estab = row['Establecimientos'];
+    if(estab !== prev){
+      if(!(estab in estabColorMap)){
+        estabColorMap[estab] = toggle % 2 === 0 ? 'bg-white' : 'bg-gray';
+        toggle++;
+      }
+      prev = estab;
+    }
+    row._bg = estabColorMap[estab] || 'bg-white';
+    row._aire = mentionsAire(row);
+  });
+
+  var aireCount = 0;
+  dataRows.forEach(function(r){ if(r._aire) aireCount++; });
+  var otrosCount = dataRows.length - aireCount;
+
+  document.getElementById('stat-total').textContent = dataRows.length;
+  document.getElementById('stat-aire').textContent = aireCount;
+  document.getElementById('stat-otros').textContent = otrosCount;
+
+  // THEAD
+  var thead = document.getElementById('t-head');
+  thead.innerHTML = '';
+  var headTr = document.createElement('tr');
+  COLS_KEEP.forEach(function(h){
+    var th = document.createElement('th');
+    th.textContent = h;
+    headTr.appendChild(th);
+  });
+  var thRes = document.createElement('th');
+  thRes.textContent = 'Resumen';
+  headTr.appendChild(thRes);
+  thead.appendChild(headTr);
+
+  // Set print date
+  var now = new Date();
+  var dateStr = now.toLocaleDateString('es-CL', {day:'2-digit',month:'2-digit',year:'numeric'});
+  var timeStr = now.toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'});
+  document.getElementById('print-date').textContent = 'Fecha de impresion: ' + dateStr + ' ' + timeStr;
+
+  // TBODY
+  var tbody = document.getElementById('t-body');
+  tbody.innerHTML = '';
+
+  var aireCounter = 0;
+  var otrosCounter = 0;
+
+  dataRows.forEach(function(row){
+    var tr = document.createElement('tr');
+    tr.className = (row._aire ? 'aire-row' : 'normal-row') + ' ' + row._bg;
+
+    COLS_KEEP.forEach(function(key){
+      var td = document.createElement('td');
+      td.textContent = row[key];
+      var slug = key.toLowerCase().replace(/\s+/g,'-');
+      td.className = (WRAP_COLS[key] ? 'wrap ' : '') + 'col-' + slug;
+      tr.appendChild(td);
+    });
+
+    // Resumen cell: aire left in red, otros right in black
+    var tdRes = document.createElement('td');
+    tdRes.style.fontFamily = 'monospace';
+    tdRes.style.fontSize = '0.82rem';
+    tdRes.style.position = 'relative';
+    tdRes.style.minWidth = '80px';
+    if(row._aire){
+      aireCounter++;
+      tdRes.innerHTML = '<span style="color:#C62828;font-weight:700;float:left;">' + aireCounter + '</span>';
+    } else {
+      otrosCounter++;
+      tdRes.innerHTML = '<span style="color:#1A1A1A;float:right;">' + otrosCounter + '</span>';
+    }
+    tr.appendChild(tdRes);
+    tbody.appendChild(tr);
+  });
+
+  // TOTALS ROW
+  var trTot = document.createElement('tr');
+  trTot.className = 'totals-row';
+  COLS_KEEP.forEach(function(k, i){
+    var td = document.createElement('td');
+    td.textContent = i === 0 ? 'TOTALES' : '';
+    trTot.appendChild(td);
+  });
+  var tdS = document.createElement('td');
+  tdS.innerHTML = 'Aire/AC: <strong>' + aireCount + '</strong> &nbsp;|&nbsp; Otros: <strong>' + otrosCount + '</strong>';
+  trTot.appendChild(tdS);
+  tbody.appendChild(trTot);
+
+  // Show UI
+  dropZone.style.display = 'none';
+  document.getElementById('stats-bar').style.cssText = 'display:flex;';
+  document.getElementById('legend').style.cssText = 'display:flex;';
+  document.getElementById('toolbar').style.cssText = 'display:flex;';
+  document.getElementById('table-container').style.display = 'block';
+  // print-header is CSS-only shown on print, no JS needed
+}
+
+function resetApp(){
+  dropZone.style.display = 'block';
+  hideError();
+  ['stats-bar','legend','toolbar'].forEach(function(id){ document.getElementById(id).style.display='none'; });
+  document.getElementById('table-container').style.display = 'none';
+  document.getElementById('t-head').innerHTML = '';
+  document.getElementById('t-body').innerHTML = '';
+  fileInput.value = '';
+}
+</script>
+</body>
+</html>
